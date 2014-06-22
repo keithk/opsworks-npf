@@ -1,0 +1,193 @@
+<%
+# Initialize default listen option
+listen_first = '' 
+%>
+<% @params[:server_aliases].each do |server_alias| %>
+  <% if server_alias != @application_name -%>
+    server {
+      listen   80;
+
+      server_name <%= server_alias %><% if server_alias.index('www-') == 0 -%> <%= server_alias.slice(4, a.length-4) %><% end -%>;
+
+      <% if server_alias.index('-' + @application_name).nil? -%>
+        root <%= @params[:docroot] %><%= server_alias %>/web;
+      <% else -%>
+        root <%= @params[:docroot] %><%= server_alias[0, a.index('-' + @application_name)] %>/web;
+      <% end -%>        
+
+      access_log <%= node['nginx']['log_dir'] %>/<%= server_alias %>.access.log;
+      error_log <%= node['nginx']['log_dir'] %>/<%= server_alias %>.error.log;
+
+      index index.php;
+
+      server_tokens off;
+
+      # Only allow these request methods ##
+      # Do not accept DELETE, SEARCH and other methods
+      if ($request_method !~ ^(GET|HEAD|POST)$ ) {
+        return 444;
+      }
+
+      # Deny certain Referers
+      if ( $http_referer ~* (babes|forsale|girl|jewelry|love|nudit|organic|poker|porn|sex|teen) )
+      {
+        return 404;
+        return 403;
+      }
+      
+      # Serve static files directly
+      location ~* ^.+.(jpg|jpeg|gif|css|png|js|ico|html|xml|txt)$ {
+        access_log off;
+        log_not_found off;
+        expires max;
+      }
+
+      location / {
+        try_files   $uri $uri/ /index.php;
+      }
+
+      location ~ \.php$ {
+        include fastcgi.conf;
+        try_files $uri =404; # This is not needed if you have cgi.fix_pathinfo = 0 in php.ini (you should!)
+        <%
+        # Get php-fpm pool listen option for the domain
+        listen = ''
+        if @params[:domain_pools] && @params[:domain_pools][server_alias]
+          pool_name = @params[:domain_pools][server_alias]
+          @params[:php_fpm_pools].each do |pool|
+            if pool[:name] == pool_name
+              if pool[:listen]
+                listen = pool[:listen]
+              else
+                listen = "unix:/var/run/#{@params[:php_fpm_service_name]}-#{pool_name}.sock"
+              end
+            end
+          end
+        else
+          listen = @params[:php_fpm_pools].first[:listen]
+        end
+
+        # Use default listen
+        if listen.empty? && !listen_first.empty?
+          listen = listen_first
+        else
+          listen_first = listen_first.empty? ? listen : listen_first
+        end
+        %>
+        <%= listen.empty? ? '' : "fastcgi_pass #{listen};" %>
+      }
+
+      # Prevent access to hidden files and folders
+      location ~ /\. {
+        access_log off;
+        log_not_found off; 
+        deny all;
+      }
+      
+      location /nginx_status {
+        #auth_basic "Restricted";
+        #auth_basic_user_file <%= @params[:docroot] %>.htpasswd;
+        stub_status on;
+        access_log off;
+        allow 127.0.0.1;
+        deny all;
+      }
+
+      location /php_fpm_status {
+        #auth_basic "Restricted";
+        #auth_basic_user_file <%= @params[:docroot] %>.htpasswd;
+        allow 127.0.0.1;
+        deny all;
+        include fastcgi.conf;
+        <%= listen.empty? ? '' : "fastcgi_pass #{listen};" %>
+      }
+    }
+    <% if @application[:ssl_support] %>
+    
+      server {
+        listen   443;
+
+        server_name  <%= server_alias %><% if server_alias.index('www-') == 0 -%> <%= server_alias.slice(4, a.length-4) %><% end -%>;
+
+        <% if server_alias.index("-" + @application_name).nil? -%>
+          root <%= @params[:docroot] %><%= server_alias %>/web;
+        <% else -%>
+          root <%= @params[:docroot] %><%= server_alias[0, a.index('-' + @application_name)] %>/web;
+        <% end -%>           
+
+        access_log  <%= node['nginx']['log_dir'] %>/<%= server_alias %>.access.log;
+        error_log  <%= node['nginx']['log_dir'] %>/<%= server_alias %>.error.log;
+
+        ssl on;
+        ssl_certificate /etc/nginx/ssl/<%= @params[:server_name] %>.crt; ssl_certificate_key /etc/nginx/ssl/<%= @params[:server_name] %>.key;
+        <% if @application[:ssl_certificate_ca] -%>
+        ssl_client_certificate /etc/nginx/ssl/<%= @params[:server_name] %>.ca;
+        <% end -%>
+        
+        index index.php;
+
+        server_tokens off;
+
+        # Only requests to our Host are allowed 
+        if ($host !~ ^($server_name)$ ) {
+          return 444;
+        }
+
+        # Only allow these request methods ##
+        # Do not accept DELETE, SEARCH and other methods
+        if ($request_method !~ ^(GET|HEAD|POST)$ ) {
+          return 444;
+        }
+
+        # Deny certain Referers
+        if ( $http_referer ~* (babes|forsale|girl|jewelry|love|nudit|organic|poker|porn|sex|teen) )
+        {
+          return 404;
+          return 403;
+        }
+
+        # Serve static files directly
+        location ~* ^.+.(jpg|jpeg|gif|css|png|js|ico|html|xml|txt)$ {
+          access_log off;
+          log_not_found off;
+          expires max;
+        }        
+
+        location / {
+          try_files   $uri $uri/ /index.php;
+        }
+
+        location ~ \.php$ {
+          include fastcgi.conf;
+          try_files $uri =404; # This is not needed if you have cgi.fix_pathinfo = 0 in php.ini (you should!)
+          <%= listen.empty? ? '' : "fastcgi_pass #{listen};" %>
+        }
+
+        # Prevent access to hidden files and folders
+        location ~ /\. {
+          access_log off;
+          log_not_found off; 
+          deny all;
+        }
+        
+        location /nginx_status {
+          #auth_basic "Restricted";
+          #auth_basic_user_file <%= @params[:docroot] %>.htpasswd;
+          stub_status on;
+          access_log off;
+          allow 127.0.0.1;
+          deny all;
+        }
+
+        location /php_fpm_status {
+          #auth_basic "Restricted";
+          #auth_basic_user_file <%= @params[:docroot] %>.htpasswd;
+          allow 127.0.0.1;
+          deny all;
+          include fastcgi.conf;
+          <%= listen.empty? ? '' : "fastcgi_pass #{listen};" %>
+        }
+      }
+    <% end -%>
+  <% end -%>
+<% end -%>

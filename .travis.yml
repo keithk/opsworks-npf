@@ -1,0 +1,10 @@
+language: ruby
+bundler_args: --without kitchen_vagrant
+rvm:
+  - 1.9.3
+  - 2.0.0
+before_script:
+  - bundle exec berks
+script:
+  - bundle exec rake style
+  - bundle exec rake spec

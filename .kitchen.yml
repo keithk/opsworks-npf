@@ -1,0 +1,67 @@
+---
+driver:
+  name: vagrant
+  customize:
+    memory: 1024
+  network:
+    - ['private_network', {ip: '10.0.0.10'}]
+  vagrantfile_erb: templates/Vagrantfile.erb
+
+provisioner:
+  name: chef_solo
+  require_chef_omnibus: 11.10.4
+
+platforms:
+  - name: centos-6.5
+    driver:
+      box: chef/centos-6.5
+
+suites:
+  - name: npf
+    run_list:
+      - recipe[repo-helper]
+      - recipe[npf]
+    attributes:
+      opsworks:
+        ruby_stack: ruby
+      deploy:
+        test:
+          application: test
+          application_type: php
+          deploy_to: /srv/www/test
+          domain_pools:
+            test.dev.com: www
+            www.test.dev.com: www
+            backend.test.dev.com: backend
+          user: deploy
+          group: nginx
+          domains:
+            - test.dev.com
+            - www.test.dev.com
+            - backend.test.dev.com
+      nginx:
+        worker_processes: 1
+      php:
+        install_method: package
+        packages:
+          - php
+          - php-fpm
+          # - php-gd
+          # - php-mcrypt
+          # - php-pecl-memcache
+          # - php-mysql
+          # - php-mysqli
+          # - php-pdo
+          # - php-pear
+          # - php-pear-Auth-SASL
+          # - php-pear-XML-Parser
+          # - php-pear-Mail-Mime
+          # - php-pear-DB
+          # - php-pear-HTML-Common
+      php-fpm:
+        service_name: php-fpm
+        user: nginx
+        group: nginx
+        pools:
+          - {name: www}
+          - {name: backend}
