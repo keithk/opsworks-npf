@@ -106,6 +106,7 @@ describe 'npf::default' do
     end
 
     # Initialize default listen option
+    listen_first = ''
     deploy[:domains].each do |server_alias|
       if server_alias != deploy[:domains].first
         it 'renders ' + nginx_site_dir + '/' + application.to_s + ' with content "server_name ' + server_alias + '"' do

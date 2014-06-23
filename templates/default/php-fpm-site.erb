@@ -1,3 +1,7 @@
+<%
+# Initialize default listen option
+listen_first = ''
+%>
 <% @params[:server_aliases].each do |server_alias| %>
   <% if server_alias != @application_name -%>
     server {
