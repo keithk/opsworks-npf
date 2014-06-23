@@ -106,7 +106,6 @@ describe 'npf::default' do
     end
 
     # Initialize default listen option
-    listen_first = ''
     deploy[:domains].each do |server_alias|
       if server_alias != deploy[:domains].first
         it 'renders ' + nginx_site_dir + '/' + application.to_s + ' with content "server_name ' + server_alias + '"' do
@@ -133,11 +132,8 @@ describe 'npf::default' do
         end
 
         # Use default listen
-        if listen.empty? && !listen_first.empty?
-          listen = listen_first
-        else
-          listen_first = listen_first.empty? ? listen : listen_first
-        end
+        listen = listen.empty? && listen_first ? listen_first : listen
+        listen_first ||= listen
 
         it 'renders ' + nginx_site_dir + '/' + application.to_s + ' with content "fastcgi_pass ' + listen + '"' do
           chef_run.should render_file(nginx_site_dir + '/' + application.to_s).with_content('fastcgi_pass ' + listen)

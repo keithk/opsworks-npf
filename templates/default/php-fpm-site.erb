@@ -1,7 +1,3 @@
-<%
-# Initialize default listen option
-listen_first = ''
-%>
 <% @params[:server_aliases].each do |server_alias| %>
   <% if server_alias != @application_name -%>
     server {
@@ -68,11 +64,8 @@ listen_first = ''
         end
 
         # Use default listen
-        if listen.empty? && !listen_first.empty?
-          listen = listen_first
-        else
-          listen_first = listen_first.empty? ? listen : listen_first
-        end
+        listen = listen.empty? && listen_first ? listen_first : listen
+        listen_first ||= listen
         %>
         <%= listen.empty? ? '' : "fastcgi_pass #{listen};" %>
       }
