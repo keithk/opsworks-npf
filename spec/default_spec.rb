@@ -132,7 +132,7 @@ describe 'npf::default' do
         end
 
         # Use default listen
-        listen = listen.empty? && listen_first ? listen_first : listen
+        listen = !listen && listen_first ? listen_first : listen
         listen_first ||= listen
 
         it 'renders ' + nginx_site_dir + '/' + application.to_s + ' with content "fastcgi_pass ' + listen + '"' do

@@ -3,7 +3,7 @@
     server {
       listen   80;
 
-      server_name <%= server_alias %><% if server_alias.index('www-') == 0 -%> <%= server_alias.slice(4, server_alias.length-4) %><% end -%>;
+      server_name <%= server_alias %><% if server_alias.index('www-') == 0 -%> <%= server_alias.slice(4, server_alias.length-4) %><% elsif server_alias.index('www.') == 0 -%> <%= server_alias.slice(4, server_alias.length-4) %><% end -%>;
 
       <% if server_alias.index('-' + @application_name).nil? -%>
         root <%= @params[:docroot] %><%= server_alias %>/web;
@@ -64,7 +64,7 @@
         end
 
         # Use default listen
-        listen = listen.empty? && listen_first ? listen_first : listen
+        listen = !listen && listen_first ? listen_first : listen
         listen_first ||= listen
         %>
         <%= listen.empty? ? '' : "fastcgi_pass #{listen};" %>
