@@ -12,7 +12,7 @@ node['deploy'].each do |application, deploy|
     action :restart
   end
 
-  service 'php-fpm' do
+  service node['php-fpm']['service_name'] do
     action :restart
   end
 

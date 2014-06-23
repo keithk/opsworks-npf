@@ -3,6 +3,11 @@ include_recipe 'php-fpm'
 
 node['deploy'].each do |application, deploy|
 
+  if deploy[:application_type] != 'php'
+    Chef::Log.debug("Skipping web application #{application} as it is not a PHP app")
+    next
+  end
+
   nginx_web_app application do
     template 'php-fpm-site.erb'
     cookbook 'npf'
@@ -20,6 +25,6 @@ node['deploy'].each do |application, deploy|
   end
 end
 
-service 'php-fpm' do
+service node['php-fpm']['service_name'] do
   action :start
 end
